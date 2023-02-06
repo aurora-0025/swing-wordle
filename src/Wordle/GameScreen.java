@@ -2,11 +2,15 @@ package Wordle;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
@@ -16,32 +20,39 @@ import javax.swing.ActionMap;
 import javax.swing.Box;
 import javax.swing.InputMap;
 import javax.swing.JComponent;
+import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
-import javax.swing.Popup;
-import javax.swing.PopupFactory;
 import javax.swing.Timer;
 
+import Wordle.components.GameEndMenu;
 import Wordle.components.NavBar;
-import Wordle.components.PopUp;
+import Wordle.components.PopUpBox;
 import Wordle.components.Tile;
 import Wordle.utils.SQLiteConnector;
 import Wordle.utils.Colors.TileColor;
 
 public class GameScreen extends JPanel {
     SQLiteConnector conn = null;
+    JFrame parentFrame = null;
+    JPanel mainBody = null;
+    Container glassPane = null;
+    Timer animateTimer = null;
+    PopUpBox errorPopupPanel = new PopUpBox("");
+    GameEndMenu gameEndMenu = new GameEndMenu();
     private String answer = "CRANE";
+    private final String[] winMessages = { "Genius", "Magnificent", "Impressive", "Splendid", "Great", "Phew" };
     int currRound = 0;
     int currChar = -1;
-    PopupFactory pf;
-    Popup pop;
     Tile[][] tilesArr = new Tile[6][5];
 
     Action submitAction;
     Action placeCharAction;
     Action removeCharAction;
 
-    GameScreen() {
+    GameScreen(JFrame parentFrame) {
+        this.parentFrame = parentFrame;
+        errorPopupPanel.setVisible(false);
         conn = new SQLiteConnector();
         ResultSet rWord = conn.queryDb("select name from words order by random() limit 1;");
         try {
@@ -53,13 +64,9 @@ public class GameScreen extends JPanel {
         }
         System.out.println(answer);
         this.setLayout(new BorderLayout());
-        JPanel mainBody = new JPanel();
+        mainBody = new JPanel();
         mainBody.setBackground(new Color(0x121213));
         mainBody.setLayout(new BorderLayout());
-
-        pf = new PopupFactory();
-        PopUp p = new PopUp();
-        Popup pop = pf.getPopup(this, p, 180, 100);
         JPanel gridPanel = new JPanel(new GridLayout(6, 5, 5, 5));
         gridPanel.setMaximumSize(new Dimension(400, 300));
         gridPanel.setBackground(new Color(0x121213));
@@ -77,7 +84,9 @@ public class GameScreen extends JPanel {
         mainBody.add(box, BorderLayout.CENTER);
 
         Box box2 = Box.createVerticalBox();
-        box2.add(Box.createVerticalGlue());
+        box2.add(Box.createVerticalStrut(30));
+        box2.add(errorPopupPanel);
+        box2.add(Box.createVerticalStrut(10));
         box2.add(box);
         box2.add(Box.createVerticalGlue());
         InputMap IMap = this.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
@@ -98,12 +107,70 @@ public class GameScreen extends JPanel {
         IMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "submit");
         AMap.put("submit", new SubmitAction());
         mainBody.add(box2, BorderLayout.CENTER);
-
         this.add(new NavBar(), BorderLayout.NORTH);
         this.add(mainBody, BorderLayout.CENTER);
-
+        parentFrame.setGlassPane(new JComponent() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                g.setColor(new Color(0, 0, 0, 150));
+                g.fillRect(0, 0, getWidth(), getHeight());
+            }
+        });
+        glassPane = (Container) parentFrame.getGlassPane();
+        glassPane.setLayout(new GridBagLayout());
+        glassPane.addMouseListener(new MouseAdapter() {
+        });
+        GameEndMenu gameEndPanel = new GameEndMenu();
+        gameEndPanel.playAgainButton.addActionListener((ActionEvent ev) -> {
+            glassPane.setVisible(false);
+            resetGame();
+        });
+        glassPane.add(gameEndPanel);
+        glassPane.setVisible(false);
         this.setFocusable(true);
         this.requestFocusInWindow();
+    }
+
+    public void resetGame() {
+        animateTimer = new Timer(50, new clearBoardAnimation());
+        animateTimer.setInitialDelay(0);
+        animateTimer.setRepeats(true);
+        animateTimer.setCoalesce(false);
+        animateTimer.start();
+    }
+
+    private class clearBoardAnimation implements ActionListener {
+        private int index = 0;
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            if (index < 30) {
+                Tile animateTile = tilesArr[index / 5][index % 5];
+                if (animateTile.getBackground().getRGB() == new Color(TileColor.DEFAULT).getRGB()) {
+                    animateTimer.stop();
+                    currRound = 0;
+                    currChar = -1;
+                } else {
+                    animateTile.setBackground(new Color(TileColor.DEFAULT));
+                    animateTile.setBorderColor(TileColor.BORDER);
+                    animateTile.setText(" ");
+                    ResultSet rWord = conn.queryDb("select name from words order by random() limit 1;");
+
+                    try {
+                        if (rWord.next()) {
+                            answer = rWord.getString("name");
+                        }
+                    } catch (SQLException err) {
+                        err.printStackTrace();
+                    }
+                }
+            } else {
+                animateTimer.stop();
+                currRound = 0;
+                currChar = -1;
+            }
+            index++;
+        }
     }
 
     public class SubmitAction extends AbstractAction {
@@ -135,10 +202,31 @@ public class GameScreen extends JPanel {
 
                 if (!wordExists) {
                     // Shake animation
-                    pop.show();
-                    for (Tile tile : tilesArr[currRound]) {
-                        tile.shake();
-                    }
+                    errorPopupPanel.setPopUpBoxMsg("Not in word list");
+                    errorPopupPanel.setVisible(true);
+
+                    Timer timer = new Timer(2000, new ActionListener() {
+                        public void actionPerformed(ActionEvent e) {
+                            for (Tile tile : tilesArr[currRound]) {
+                                tile.shake();
+                            }
+                            repaint();
+                        }
+                    });
+                    timer.setRepeats(false);
+                    timer.setInitialDelay(0);
+                    timer.start();
+
+                    Timer hidePopupTimer = new Timer(2000, new ActionListener() {
+                        public void actionPerformed(ActionEvent e) {
+                            errorPopupPanel.setPopUpBoxMsg("");
+                            errorPopupPanel.setVisible(false);
+                            repaint();
+                        }
+                    });
+                    hidePopupTimer.setRepeats(false);
+                    hidePopupTimer.setInitialDelay(1500);
+                    hidePopupTimer.start();
                     return;
                 }
 
@@ -179,14 +267,6 @@ public class GameScreen extends JPanel {
             }
         }
 
-        private void resetGame() {
-            animateTimer = new Timer(50, new clearBoardAnimation());
-            animateTimer.setInitialDelay(0);
-            animateTimer.setRepeats(true);
-            animateTimer.setCoalesce(false);
-            animateTimer.start();
-        }
-
         class AddColorAnimation implements ActionListener {
             private int index = 0;
 
@@ -198,49 +278,38 @@ public class GameScreen extends JPanel {
                     animateTile.setBackground(new Color(animateColor));
                 } else {
                     animateTimer.stop();
-                    System.out.println(currRound);
                     if (correctCount == 5) {
+                        errorPopupPanel.setPopUpBoxMsg(winMessages[currRound]);
+                        errorPopupPanel.setVisible(true);
+                        Timer hidePopupTimer = new Timer(2000, new ActionListener() {
+                            public void actionPerformed(ActionEvent e) {
+                                errorPopupPanel.setVisible(false);
+                                glassPane.setVisible(true);
+                                repaint();
+                            }
+                        });
+                        gameEndMenu.playAgainButton.setBackground(Color.BLACK);
+                        hidePopupTimer.setRepeats(false);
+                        hidePopupTimer.setInitialDelay(1500);
+                        hidePopupTimer.start();
                         System.out.println("You Found the word");
-                        resetGame();
                     } else if (currRound == 5) {
+                        glassPane.setVisible(true);
                         System.out.println("You Failed To Find The Word");
-                        resetGame();
+                        errorPopupPanel.setPopUpBoxMsg(answer);
+                        errorPopupPanel.setVisible(true);
+                        Timer hidePopupTimer = new Timer(2000, new ActionListener() {
+                            public void actionPerformed(ActionEvent e) {
+                                errorPopupPanel.setVisible(false);
+                                glassPane.setVisible(true);
+                                repaint();
+                            }
+                        });
+                        hidePopupTimer.setRepeats(false);
+                        hidePopupTimer.setInitialDelay(1500);
+                        hidePopupTimer.start();
                     }
                     currRound++;
-                    currChar = -1;
-                }
-                index++;
-            }
-        }
-
-        class clearBoardAnimation implements ActionListener {
-            private int index = 0;
-
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (index < 30) {
-                    animateTile = tilesArr[index / 5][index % 5];
-                    if (animateTile.getBackground().getRGB() == new Color(TileColor.DEFAULT).getRGB()) {
-                        animateTimer.stop();
-                        currRound = 0;
-                        currChar = -1;
-                    } else {
-                        animateTile.setBackground(new Color(TileColor.DEFAULT));
-                        animateTile.setBorderColor(TileColor.BORDER);
-                        animateTile.setText(" ");
-                        ResultSet rWord = conn.queryDb("select name from words order by random() limit 1;");
-
-                        try {
-                            if (rWord.next()) {
-                                answer = rWord.getString("name");
-                            }
-                        } catch (SQLException err) {
-                            err.printStackTrace();
-                        }
-                    }
-                } else {
-                    animateTimer.stop();
-                    currRound = 0;
                     currChar = -1;
                 }
                 index++;
@@ -265,7 +334,6 @@ public class GameScreen extends JPanel {
                 currTile.setBorderColor(TileColor.ACTIVE_BORDER);
             }
         }
-
     }
 
     public class removeCharAction extends AbstractAction {

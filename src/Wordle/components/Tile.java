@@ -77,6 +77,7 @@ public class Tile extends JLabel {
     }
 
     public void shake() {
+        // SwingUtilities.invokeLater(shakeAnimation);
         new Thread(this.shakeAnimation).start();
     }
 
