@@ -16,13 +16,20 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.LineBorder;
 
+import Wordle.model.User;
 import Wordle.utils.CenterComponent;
 import Wordle.utils.Colors.TileColor;
 
 public class GameEndMenu extends JPanel {
+    private MenuTextLabel playedStats;
+    private MenuTextLabel winRateStats;
+    private MenuTextLabel currentStreakStats;
+    private MenuTextLabel maxStreakStats;
     public JButton playAgainButton;
     public ActionListener l;
-    public GameEndMenu() {
+    private User user;
+    public GameEndMenu(User user) {
+        this.user = user;
         setLayout(new BorderLayout());
         setBorder(new LineBorder(new Color(0x1a1a1b), 1, true));
         setBackground(new Color(0x121213));
@@ -35,23 +42,23 @@ public class GameEndMenu extends JPanel {
 
         Box playedStatsBox = Box.createVerticalBox();
         playedStatsBox.setAlignmentY(TOP_ALIGNMENT);
-        MenuTextLabel playedStats = new MenuTextLabel("0", 30);
+        playedStats = new MenuTextLabel(String.valueOf(user.getTotalPlayed()), 30);
         playedStatsBox.add(HCenter(playedStats));
         playedStatsBox.add(HCenter(new MenuTextLabel("Played")));
         Box winRateStatsBox = Box.createVerticalBox();
         winRateStatsBox.setAlignmentY(TOP_ALIGNMENT);
-        MenuTextLabel winRateStats = new MenuTextLabel("0"+"%", 30);
+        winRateStats = new MenuTextLabel(user.getWinRate()+"%", 30);
         winRateStatsBox.add(HCenter(winRateStats));
         winRateStatsBox.add(HCenter(new MenuTextLabel("Win %")));
         Box currentStreakStatsBox = Box.createVerticalBox();
         currentStreakStatsBox.setAlignmentY(TOP_ALIGNMENT);
-        MenuTextLabel currentStreakStats = new MenuTextLabel("0", 30);
+        currentStreakStats = new MenuTextLabel(String.valueOf(user.getCurrentStreak()), 30);
         currentStreakStatsBox.add(HCenter(currentStreakStats));
         currentStreakStatsBox.add(HCenter(new MenuTextLabel("Current")));
         currentStreakStatsBox.add(HCenter(new MenuTextLabel("Streak")));
         Box maxStreakStatsBox = Box.createVerticalBox();
         maxStreakStatsBox.setAlignmentY(TOP_ALIGNMENT);
-        MenuTextLabel maxStreakStats = new MenuTextLabel("0", 30);
+        maxStreakStats = new MenuTextLabel(String.valueOf(user.getMaxStreak()), 30);
         maxStreakStatsBox.add(HCenter(maxStreakStats));
         maxStreakStatsBox.add(HCenter(new MenuTextLabel("Max")));
         maxStreakStatsBox.add(HCenter(new MenuTextLabel("Streak")));
@@ -97,12 +104,20 @@ public class GameEndMenu extends JPanel {
         add(menuPanel, BorderLayout.CENTER);
     }
 
-    public Box HCenter(Component comp) {
+    private Box HCenter(Component comp) {
         Box hCenterBox = Box.createHorizontalBox();
         hCenterBox.add(Box.createHorizontalGlue());
         hCenterBox.add(comp);
         hCenterBox.add(Box.createHorizontalGlue());
         return hCenterBox;
+    }
+
+    public void updateGUI() {   
+        System.out.println(user.getTotalPlayed());
+        playedStats.setText(String.valueOf(user.getTotalPlayed()));
+        winRateStats.setText(user.getWinRate());
+        currentStreakStats.setText(String.valueOf(user.getCurrentStreak()));
+        maxStreakStats.setText(String.valueOf(user.getMaxStreak()));
     }
 }
 

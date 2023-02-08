@@ -11,8 +11,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -29,17 +27,20 @@ import Wordle.components.GameEndMenu;
 import Wordle.components.NavBar;
 import Wordle.components.PopUpBox;
 import Wordle.components.Tile;
-import Wordle.utils.SQLiteConnector;
+import Wordle.db.SQLiteConnector;
+import Wordle.model.User;
 import Wordle.utils.Colors.TileColor;
 
 public class GameScreen extends JPanel {
-    SQLiteConnector conn = null;
+    User user = new User("guest", "xxxtentacion");
+    Wordle.db.SQLiteConnector conn = null;
     JFrame parentFrame = null;
     JPanel mainBody = null;
     Container glassPane = null;
-    Timer animateTimer = null;
+    private static Timer animateTimer;
     PopUpBox errorPopupPanel = new PopUpBox("");
-    GameEndMenu gameEndMenu = new GameEndMenu();
+    GameEndMenu gameEndMenu;
+
     private String answer = "CRANE";
     private final String[] winMessages = { "Genius", "Magnificent", "Impressive", "Splendid", "Great", "Phew" };
     int currRound = 0;
@@ -51,17 +52,15 @@ public class GameScreen extends JPanel {
     Action removeCharAction;
 
     GameScreen(JFrame parentFrame) {
+        gameEndMenu = new GameEndMenu(user);
+        gameEndMenu.playAgainButton.addActionListener((ActionEvent ev) -> {
+            glassPane.setVisible(false);
+            resetGame();
+        });
         this.parentFrame = parentFrame;
         errorPopupPanel.setVisible(false);
         conn = new SQLiteConnector();
-        ResultSet rWord = conn.queryDb("select name from words order by random() limit 1;");
-        try {
-            if (rWord.next()) {
-                answer = rWord.getString("name");
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        answer = conn.getRandomWord();
         System.out.println(answer);
         this.setLayout(new BorderLayout());
         mainBody = new JPanel();
@@ -118,20 +117,14 @@ public class GameScreen extends JPanel {
         });
         glassPane = (Container) parentFrame.getGlassPane();
         glassPane.setLayout(new GridBagLayout());
-        glassPane.addMouseListener(new MouseAdapter() {
-        });
-        GameEndMenu gameEndPanel = new GameEndMenu();
-        gameEndPanel.playAgainButton.addActionListener((ActionEvent ev) -> {
-            glassPane.setVisible(false);
-            resetGame();
-        });
-        glassPane.add(gameEndPanel);
+        glassPane.addMouseListener(new MouseAdapter(){});
         glassPane.setVisible(false);
         this.setFocusable(true);
         this.requestFocusInWindow();
     }
 
     public void resetGame() {
+        glassPane.remove(gameEndMenu);
         animateTimer = new Timer(50, new clearBoardAnimation());
         animateTimer.setInitialDelay(0);
         animateTimer.setRepeats(true);
@@ -147,27 +140,25 @@ public class GameScreen extends JPanel {
             if (index < 30) {
                 Tile animateTile = tilesArr[index / 5][index % 5];
                 if (animateTile.getBackground().getRGB() == new Color(TileColor.DEFAULT).getRGB()) {
-                    animateTimer.stop();
+                    answer = conn.getRandomWord();
                     currRound = 0;
                     currChar = -1;
+                    System.out.println("test");
+                    animateTimer.stop();
+                    return;
                 } else {
                     animateTile.setBackground(new Color(TileColor.DEFAULT));
                     animateTile.setBorderColor(TileColor.BORDER);
                     animateTile.setText(" ");
-                    ResultSet rWord = conn.queryDb("select name from words order by random() limit 1;");
-
-                    try {
-                        if (rWord.next()) {
-                            answer = rWord.getString("name");
-                        }
-                    } catch (SQLException err) {
-                        err.printStackTrace();
-                    }
+                    answer = conn.getRandomWord();
+                    currRound = 0;
+                    currChar = -1;
                 }
             } else {
-                animateTimer.stop();
                 currRound = 0;
                 currChar = -1;
+                animateTimer.stop();
+                return;
             }
             index++;
         }
@@ -176,7 +167,6 @@ public class GameScreen extends JPanel {
     public class SubmitAction extends AbstractAction {
         private Tile animateTile;
         private int animateColor;
-        private Timer animateTimer;
         private int resultColors[];
         private int correctCount;
 
@@ -191,15 +181,7 @@ public class GameScreen extends JPanel {
                 for (Tile tile : tilesArr[currRound]) {
                     guess += tile.getText();
                 }
-                ResultSet rWord = conn
-                        .queryDb("select name from allWords where name='" + guess.toLowerCase() + "' limit 1;");
-                boolean wordExists = false;
-                try {
-                    wordExists = rWord.next();
-                } catch (SQLException e1) {
-                    e1.printStackTrace();
-                }
-
+                boolean wordExists = conn.checkIfWordExists(guess.toLowerCase());
                 if (!wordExists) {
                     // Shake animation
                     errorPopupPanel.setPopUpBoxMsg("Not in word list");
@@ -279,21 +261,30 @@ public class GameScreen extends JPanel {
                 } else {
                     animateTimer.stop();
                     if (correctCount == 5) {
+                        user.setWins(user.getWins() + 1);
+                        user.setCurrentStreak(user.getCurrentStreak()+1);
+                        if(user.getCurrentStreak() > user.getMaxStreak()) {
+                            user.setMaxStreak(user.getCurrentStreak());
+                        }
                         errorPopupPanel.setPopUpBoxMsg(winMessages[currRound]);
                         errorPopupPanel.setVisible(true);
                         Timer hidePopupTimer = new Timer(2000, new ActionListener() {
                             public void actionPerformed(ActionEvent e) {
                                 errorPopupPanel.setVisible(false);
+                                gameEndMenu.updateGUI();
+                                glassPane.add(gameEndMenu);
                                 glassPane.setVisible(true);
-                                repaint();
                             }
                         });
-                        gameEndMenu.playAgainButton.setBackground(Color.BLACK);
                         hidePopupTimer.setRepeats(false);
                         hidePopupTimer.setInitialDelay(1500);
                         hidePopupTimer.start();
                         System.out.println("You Found the word");
                     } else if (currRound == 5) {
+                        user.setLosses((user.getLosses() + 1));
+                        user.setCurrentStreak(0);
+                        gameEndMenu.updateGUI();
+                        glassPane.add(gameEndMenu);
                         glassPane.setVisible(true);
                         System.out.println("You Failed To Find The Word");
                         errorPopupPanel.setPopUpBoxMsg(answer);

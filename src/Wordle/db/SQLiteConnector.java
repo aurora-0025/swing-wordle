@@ -1,10 +1,13 @@
-package Wordle.utils;
+package Wordle.db;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+
+import Wordle.model.User;
+import at.favre.lib.crypto.bcrypt.BCrypt;
 
 public class SQLiteConnector {
     Connection connection = null;
@@ -20,14 +23,69 @@ public class SQLiteConnector {
         }
     }
 
-    public ResultSet queryDb(String q) {
+    public String getRandomWord() {
         try {
-            rs = statement.executeQuery(q);
+            ResultSet rs = statement.executeQuery("select name from words order by random() limit 1;");
+            if(rs.next()) {
+                return rs.getString("name");
+            }
+            else {
+                return "No Word Found";
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "ERROR";
+        }
+    }
+
+    public boolean checkIfWordExists(String word) {
+        try {
+            ResultSet rs = statement.executeQuery("select name from allWords where name='" + word + "' limit 1;");
+            return rs.next();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public User getUser(String username, String password) throws UserError {
+        try {
+            ResultSet rs = statement.executeQuery("select * from userdata where username ='" + username + "' limit 1;");
+            if(rs.next()) {
+                String pwdHash = rs.getString("passwordHash");
+                BCrypt.Result result = BCrypt.verifyer().verify(password.toCharArray(), pwdHash);
+                if(result.verified) {
+                    return new User(username, pwdHash, rs.getInt("wins"), rs.getInt("losses"), rs.getInt("currentStreak"), rs.getInt("maxStreak"));
+                }
+                else throw new UserError(2);
+            } 
+            else throw new UserError(1);
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return rs;
+        return null;
     }
+
+    public class UserError extends Throwable {
+        public static final int USER_NOT_FOUND = 1;
+        public static final int INCORRECT_PASSWORD = 2;
+        private int errorCode;
+        UserError(int errCode) {
+            this.errorCode = errCode;
+        }
+        public int getErrorCode() {
+            return this.errorCode;
+        }
+    }
+}
+
+
+
+
+
+
+
     // public static void main(String[] args) {
     //     Connection connection = null;
     //     try {
@@ -69,4 +127,3 @@ public class SQLiteConnector {
     //         }
     //     }
     // }
-}
