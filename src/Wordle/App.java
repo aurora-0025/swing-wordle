@@ -14,7 +14,7 @@ public class App {
             frame.setSize(600, 600);
             frame.setLocationRelativeTo(null);
             frame.setTitle("Wordle");
-            frame.setContentPane(new GameScreen(frame));
+            frame.getContentPane().add(new Login(frame));
             frame.setVisible(true);
         }
 }

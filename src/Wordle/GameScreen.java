@@ -32,8 +32,9 @@ import Wordle.model.User;
 import Wordle.utils.Colors.TileColor;
 
 public class GameScreen extends JPanel {
-    User user = new User("guest", "xxxtentacion");
+    User user;
     Wordle.db.SQLiteConnector conn = null;
+
     JFrame parentFrame = null;
     JPanel mainBody = null;
     Container glassPane = null;
@@ -51,7 +52,8 @@ public class GameScreen extends JPanel {
     Action placeCharAction;
     Action removeCharAction;
 
-    GameScreen(JFrame parentFrame) {
+    GameScreen(JFrame parentFrame, User user) {
+        this.user =user;
         gameEndMenu = new GameEndMenu(user);
         gameEndMenu.playAgainButton.addActionListener((ActionEvent ev) -> {
             glassPane.setVisible(false);
@@ -300,6 +302,7 @@ public class GameScreen extends JPanel {
                         hidePopupTimer.setInitialDelay(1500);
                         hidePopupTimer.start();
                     }
+                    if(!user.getUsername().equals("guest")) conn.updateUser(user);
                     currRound++;
                     currChar = -1;
                 }
