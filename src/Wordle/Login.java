@@ -166,7 +166,7 @@ class LoginScreenButton extends JButton {
         this.setText(texString);
         this.setBackground(new Color(TileColor.NOT_FOUND));
         this.setForeground(Color.WHITE);
-        this.setBorder(new EmptyBorder(7, 7, 7, 7));
+        this.setBorder(new EmptyBorder(15, 6, 15, 6));
         this.setMaximumSize(new Dimension(300, 25));
         this.setFocusable(false);
         this.setFont(new Font("Arial", Font.BOLD, 15));

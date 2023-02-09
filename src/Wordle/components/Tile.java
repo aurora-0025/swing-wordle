@@ -21,6 +21,17 @@ public class Tile extends JLabel {
     int toColor = TileColor.DEFAULT;
     char guessChar;
 
+    public Tile(Color color,int size, char letter) {
+        this.setOpaque(true);
+        this.setBackground(color);
+        this.setBorder(new LineBorder(new Color(TileColor.BORDER), 1, true));
+        this.setText(String.valueOf(letter));
+        this.setFont(mainFont);
+        this.setForeground(Color.WHITE);
+        this.setHorizontalAlignment(SwingConstants.CENTER);
+        this.setPreferredSize(new Dimension(size, size));    
+    }
+
     public Tile() {
         this.setOpaque(true);
         this.setBackground(new Color(TileColor.DEFAULT));
