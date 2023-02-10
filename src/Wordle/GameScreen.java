@@ -268,6 +268,7 @@ public class GameScreen extends JPanel {
                         if(user.getCurrentStreak() > user.getMaxStreak()) {
                             user.setMaxStreak(user.getCurrentStreak());
                         }
+                        if(!user.getUsername().equals("guest")) conn.updateUser(user);
                         errorPopupPanel.setPopUpBoxMsg(winMessages[currRound]);
                         errorPopupPanel.setVisible(true);
                         Timer hidePopupTimer = new Timer(2000, new ActionListener() {
@@ -291,6 +292,7 @@ public class GameScreen extends JPanel {
                         System.out.println("You Failed To Find The Word");
                         errorPopupPanel.setPopUpBoxMsg(answer);
                         errorPopupPanel.setVisible(true);
+                        if(!user.getUsername().equals("guest")) conn.updateUser(user);
                         Timer hidePopupTimer = new Timer(2000, new ActionListener() {
                             public void actionPerformed(ActionEvent e) {
                                 errorPopupPanel.setVisible(false);
@@ -302,7 +304,6 @@ public class GameScreen extends JPanel {
                         hidePopupTimer.setInitialDelay(1500);
                         hidePopupTimer.start();
                     }
-                    if(!user.getUsername().equals("guest")) conn.updateUser(user);
                     currRound++;
                     currChar = -1;
                 }

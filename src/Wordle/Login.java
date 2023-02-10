@@ -84,6 +84,7 @@ public class Login extends JPanel {
                 }
                 else {
                     user = db.getUser(username, password);
+                    System.out.println("User found");
                     ParentFrame.getContentPane().removeAll();
                     ParentFrame.getContentPane().add(new GameScreen(ParentFrame, user));
                     ParentFrame.revalidate();

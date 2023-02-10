@@ -71,7 +71,10 @@ public class SQLiteConnector {
 
     public void updateUser(User user) {
         try {
-            statement.executeUpdate("insert into userdata (username, passwordHash, wins, losses, currentStreak, maxStreak) values ('"+user.getUsername()+"', '"+user.getPasswordHash()+"', "+user.getWins()+", "+user.getLosses()+", "+user.getCurrentStreak()+", "+user.getMaxStreak()+")");
+            System.out.println(user.getWins());
+            //statement.executeUpdate("insert into userdata (username, passwordHash, wins, losses, currentStreak, maxStreak) values ('"+user.getUsername()+"', '"+user.getPasswordHash()+"', "+user.getWins()+", "+user.getLosses()+", "+user.getCurrentStreak()+", "+user.getMaxStreak()+")");
+            statement.executeUpdate("update userdata set username='"+user.getUsername()+"',passwordHash='"+user.getPasswordHash()+"',wins='"+user.getWins()+
+            "',losses='"+user.getLosses()+"',currentStreak='"+user.getCurrentStreak()+"',maxStreak='"+user.getMaxStreak()+"' where username='"+user.getUsername()+"'");
             System.out.println("Updated User "+user.getUsername());
         } catch (SQLException e) {
             e.printStackTrace();
