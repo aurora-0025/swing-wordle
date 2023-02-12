@@ -4,7 +4,6 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Container;
 import java.awt.Dimension;
-import java.awt.Graphics;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
@@ -18,7 +17,6 @@ import javax.swing.ActionMap;
 import javax.swing.Box;
 import javax.swing.InputMap;
 import javax.swing.JComponent;
-import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
 import javax.swing.Timer;
@@ -32,15 +30,15 @@ import Wordle.model.User;
 import Wordle.utils.Colors.TileColor;
 
 public class GameScreen extends JPanel {
-    User user;
-    Wordle.db.SQLiteConnector conn = null;
+    private User user;
+    private Wordle.db.SQLiteConnector conn = null;
 
-    JFrame parentFrame = null;
-    JPanel mainBody = null;
-    Container glassPane = null;
+    private JPanel mainBody = null;
+    private Container glassPane = null;
     private static Timer animateTimer;
-    PopUpBox errorPopupPanel = new PopUpBox("");
-    GameEndMenu gameEndMenu;
+    public static boolean isPaused = false;
+    private PopUpBox errorPopupPanel = new PopUpBox("");
+    private GameEndMenu gameEndMenu;
 
     private String answer = "CRANE";
     private final String[] winMessages = { "Genius", "Magnificent", "Impressive", "Splendid", "Great", "Phew" };
@@ -52,14 +50,14 @@ public class GameScreen extends JPanel {
     Action placeCharAction;
     Action removeCharAction;
 
-    GameScreen(JFrame parentFrame, User user) {
-        this.user =user;
+    GameScreen(User user) {
+        this.user = user;
         gameEndMenu = new GameEndMenu(user);
         gameEndMenu.playAgainButton.addActionListener((ActionEvent ev) -> {
             glassPane.setVisible(false);
+            isPaused = false;
             resetGame();
         });
-        this.parentFrame = parentFrame;
         errorPopupPanel.setVisible(false);
         conn = new SQLiteConnector();
         answer = conn.getRandomWord();
@@ -110,17 +108,12 @@ public class GameScreen extends JPanel {
         mainBody.add(box2, BorderLayout.CENTER);
         this.add(new NavBar(), BorderLayout.NORTH);
         this.add(mainBody, BorderLayout.CENTER);
-        parentFrame.setGlassPane(new JComponent() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                g.setColor(new Color(0, 0, 0, 150));
-                g.fillRect(0, 0, getWidth(), getHeight());
-            }
-        });
-        glassPane = (Container) parentFrame.getGlassPane();
+        glassPane = (Container) App.frame.getGlassPane();
         glassPane.setLayout(new GridBagLayout());
-        glassPane.addMouseListener(new MouseAdapter(){});
+        glassPane.addMouseListener(new MouseAdapter() {
+        });
         glassPane.setVisible(false);
+        isPaused = false;
         this.setFocusable(true);
         this.requestFocusInWindow();
     }
@@ -145,7 +138,6 @@ public class GameScreen extends JPanel {
                     answer = conn.getRandomWord();
                     currRound = 0;
                     currChar = -1;
-                    System.out.println("test");
                     animateTimer.stop();
                     return;
                 } else {
@@ -264,19 +256,22 @@ public class GameScreen extends JPanel {
                     animateTimer.stop();
                     if (correctCount == 5) {
                         user.setWins(user.getWins() + 1);
-                        user.setCurrentStreak(user.getCurrentStreak()+1);
-                        if(user.getCurrentStreak() > user.getMaxStreak()) {
+                        user.setCurrentStreak(user.getCurrentStreak() + 1);
+                        if (user.getCurrentStreak() > user.getMaxStreak()) {
                             user.setMaxStreak(user.getCurrentStreak());
                         }
-                        if(!user.getUsername().equals("guest")) conn.updateUser(user);
+                        if (!user.getUsername().equals("guest"))
+                            conn.updateUser(user);
                         errorPopupPanel.setPopUpBoxMsg(winMessages[currRound]);
                         errorPopupPanel.setVisible(true);
                         Timer hidePopupTimer = new Timer(2000, new ActionListener() {
                             public void actionPerformed(ActionEvent e) {
                                 errorPopupPanel.setVisible(false);
                                 gameEndMenu.updateGUI();
+                                glassPane.removeAll();
                                 glassPane.add(gameEndMenu);
                                 glassPane.setVisible(true);
+                                isPaused = true;
                             }
                         });
                         hidePopupTimer.setRepeats(false);
@@ -287,16 +282,18 @@ public class GameScreen extends JPanel {
                         user.setLosses((user.getLosses() + 1));
                         user.setCurrentStreak(0);
                         gameEndMenu.updateGUI();
-                        glassPane.add(gameEndMenu);
-                        glassPane.setVisible(true);
                         System.out.println("You Failed To Find The Word");
                         errorPopupPanel.setPopUpBoxMsg(answer);
                         errorPopupPanel.setVisible(true);
-                        if(!user.getUsername().equals("guest")) conn.updateUser(user);
+                        if (!user.getUsername().equals("guest"))
+                            conn.updateUser(user);
                         Timer hidePopupTimer = new Timer(2000, new ActionListener() {
                             public void actionPerformed(ActionEvent e) {
                                 errorPopupPanel.setVisible(false);
+                                glassPane.removeAll();
+                                glassPane.add(gameEndMenu);
                                 glassPane.setVisible(true);
+                                isPaused = true;
                                 repaint();
                             }
                         });
@@ -321,6 +318,8 @@ public class GameScreen extends JPanel {
 
         @Override
         public void actionPerformed(ActionEvent e) {
+            if (isPaused)
+                return;
             if (currChar < 4) {
                 currChar++;
                 Tile currTile = tilesArr[currRound][currChar];

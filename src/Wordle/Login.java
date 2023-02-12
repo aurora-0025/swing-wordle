@@ -86,7 +86,7 @@ public class Login extends JPanel {
                     user = db.getUser(username, password);
                     System.out.println("User found");
                     ParentFrame.getContentPane().removeAll();
-                    ParentFrame.getContentPane().add(new GameScreen(ParentFrame, user));
+                    ParentFrame.getContentPane().add(new GameScreen(user));
                     ParentFrame.revalidate();
                 }
             } catch (UserError err) {
@@ -97,7 +97,7 @@ public class Login extends JPanel {
                 else if(errCode == UserError.USER_NOT_FOUND) {
                     user = db.createUser(textUser.getText(), new String(textPass.getPassword()));
                     ParentFrame.getContentPane().removeAll();
-                    ParentFrame.getContentPane().add(new GameScreen(ParentFrame, user));
+                    ParentFrame.getContentPane().add(new GameScreen(user));
                     ParentFrame.revalidate();
                 }
             }
@@ -108,7 +108,7 @@ public class Login extends JPanel {
         buttonGuest.addActionListener((ActionEvent e)-> {
             User guestUser = new User("guest", "xxxtentacion");
             ParentFrame.getContentPane().removeAll();
-            ParentFrame.getContentPane().add(new GameScreen(ParentFrame, guestUser));
+            ParentFrame.getContentPane().add(new GameScreen(guestUser));
             ParentFrame.revalidate();
         });
 

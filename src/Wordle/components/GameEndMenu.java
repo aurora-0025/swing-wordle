@@ -28,6 +28,7 @@ public class GameEndMenu extends JPanel {
     public JButton playAgainButton;
     public ActionListener l;
     private User user;
+   
     public GameEndMenu(User user) {
         this.user = user;
         setLayout(new BorderLayout());
@@ -113,7 +114,6 @@ public class GameEndMenu extends JPanel {
     }
 
     public void updateGUI() {   
-        System.out.println(user.getTotalPlayed());
         playedStats.setText(String.valueOf(user.getTotalPlayed()));
         winRateStats.setText(user.getWinRate());
         currentStreakStats.setText(String.valueOf(user.getCurrentStreak()));
