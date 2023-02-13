@@ -20,6 +20,7 @@ import javax.swing.border.MatteBorder;
 
 import Wordle.App;
 import Wordle.HelpScreen;
+import Wordle.LeaderboardScreen;
 import Wordle.utils.Colors.TileColor;
 
 class NavBarButton extends JButton {
@@ -42,6 +43,7 @@ class NavBarButton extends JButton {
 public class NavBar extends JPanel {
     Container glassPane = null;
     HelpScreen helpmenu = new HelpScreen();
+    LeaderboardScreen lbmenu = new LeaderboardScreen();
     public NavBar() {
         this.setPreferredSize(new Dimension(100, 50));
         this.setBackground(new Color(0x121213));
@@ -65,6 +67,15 @@ public class NavBar extends JPanel {
         glassPane.addMouseListener(new MouseAdapter(){});
         glassPane.setVisible(false);
         helpmenu.closeButton.addActionListener((ActionEvent e)-> {
+            glassPane.removeAll();
+            glassPane.setVisible(false);
+        });
+        leaderboardButton.addActionListener((ActionEvent e)->{
+            glassPane.removeAll();
+            glassPane.add(lbmenu);
+            glassPane.setVisible(true);
+        });
+        lbmenu.closeButton.addActionListener((ActionEvent e)-> {
             glassPane.removeAll();
             glassPane.setVisible(false);
         });

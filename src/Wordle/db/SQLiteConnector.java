@@ -91,6 +91,10 @@ public class SQLiteConnector {
         }
     }
 
+    public ResultSet getLeaderBoard() throws SQLException {
+            return statement.executeQuery("SELECT * FROM userdata ORDER BY wins DESC, maxStreak DESC;");  
+    }
+
     public void closeConnection() {
         try {
             connection.close();
